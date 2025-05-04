@@ -1,5 +1,6 @@
 #!/bin/sh
 
+PORT=$1
 SCRIPT_PATH=$(dirname "$(realpath "$0")")
 cd "$SCRIPT_PATH" || (echo "Failed to start program." && exit)
 
@@ -13,9 +14,9 @@ CORE_COUNT=$(nproc --all)
 
 if [ -e server.crt ] && [ -e server.key ]
 then
-  gunicorn -w "$CORE_COUNT" 'main:app' -b 0.0.0.0:8080 --certfile=server.crt --keyfile=server.key --reload
+  gunicorn -w "$CORE_COUNT" 'main:app' -b 0.0.0.0:"$PORT" --certfile=server.crt --keyfile=server.key --reload
 else
-  gunicorn -w "$CORE_COUNT" 'main:app' -b 0.0.0.0:8080 --reload
+  gunicorn -w "$CORE_COUNT" 'main:app' -b 0.0.0.0:"$PORT" --reload
 fi
 
 kill "$(jobs -p)"
