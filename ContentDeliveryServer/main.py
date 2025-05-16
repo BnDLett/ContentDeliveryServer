@@ -1,4 +1,4 @@
-from flask import Flask, send_file, render_template_string
+from flask import Flask, send_file, render_template
 from pathlib import Path
 from os import chdir, getenv
 from os.path import realpath
@@ -33,25 +33,41 @@ CONFIG_ALLOW_FOLDERS = CONFIG.get('access', 'allow_folder_access', fallback='').
 CONFIG_HIDDEN_FILES = CONFIG.get('access', 'hidden_files', fallback='true').lower() == 'true'
 
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=f'{ROOT_DIRECTORY}/templates', static_folder=f'{ROOT_DIRECTORY}/static')
 
 
-def send_folder(path: Path) -> str:
-    next_parent = path.relative_to(MEDIA_PATH.absolute())
+def render_folder(real_path: Path) -> str:
+    folder_name = real_path.name
+    relative_path = real_path.relative_to(MEDIA_PATH.absolute())
 
-    html = (f"<html><head>"
-            f""
-            f"</head><body>"
-            f"<style>"
-             "body {font-size: 22;}"
-            f"</style>"
-            f"<p><a href=..>..</a><p>"
-            f"{''.join([(f"<p><a href=/{next_parent}/{str(x.relative_to(path))}>{str(x.relative_to(path))}</a></p>" 
-                        if (not str(x.name).startswith(".") or not CONFIG_HIDDEN_FILES) else '') 
-                        for x in path.iterdir()])}"
-            f"</body></html>")
+    final_html = ''
 
-    return html
+    file: Path
+    for file in real_path.iterdir():
+        if file.name.startswith(".") and CONFIG_HIDDEN_FILES:
+            continue
+
+        file_type = 'directory' if file.is_dir() else 'file'
+        button_text = 'Open directory' if file.is_dir() else 'Open file'
+
+        file_html = (f'<form class="{file_type}" action="/{file.relative_to(MEDIA_PATH.absolute())}">'
+                     f'    <img src="/static/icons/{file_type}.svg" alt="{file_type}" height=40px class="icon">'
+                     f'    <p class="file_name">{file.name}</p>'
+                     f'    <button type="submit">{button_text}</button>'
+                     f'</form>')
+        final_html += file_html
+
+    return render_template(
+        'folder.html',
+        FOLDER_NAME=folder_name,
+        BASE_PATH=str(relative_path.parent),
+        FILES=final_html
+    )
+
+
+@app.route("/test")
+def test_route():
+    return render_template('folder.html', FOLDER_NAME = 'ROOT', BASE_PATH='/test')
 
 
 @app.route("/")
@@ -59,7 +75,7 @@ def base_folder():
     if not CONFIG_ALLOW_FOLDERS:
         return send_file(FALLBACK_IMAGE)
 
-    return send_folder(MEDIA_PATH.absolute())
+    return render_folder(MEDIA_PATH.absolute())
 
 
 @app.route("/<path:filepath>")
@@ -71,7 +87,7 @@ def send_media(filepath: str):
     if not absolute_path.exists() or (absolute_path.is_dir() and not CONFIG_ALLOW_FOLDERS):
         return send_file(FALLBACK_IMAGE)
     elif absolute_path.is_dir():
-        return send_folder(absolute_path)
+        return render_folder(absolute_path)
 
     return send_file(absolute_path)
 

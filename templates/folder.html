@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{FOLDER_NAME}}</title>
+    <link rel="stylesheet" href="/static/folder.css">
+</head>
+<body>
+    <!--Use this as an example of the file format.-->
+    <form class="directory" action="/{{BASE_PATH}}">
+        <img src="/static/icons/directory.svg" alt="directory" height=40px class="icon">
+        <p class="file_name">Parent Directory (..)</p>
+        <button type="submit">Open directory</button>
+    </form>
+
+    {{FILES | safe}}
+</body>
+</html>
